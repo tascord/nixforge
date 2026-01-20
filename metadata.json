@@ -1,0 +1,5 @@
+{
+  "name": "NixForge",
+  "description": "A visual configuration tool for scaffolding NixOS machines with Flakes and Home Manager, powered by Gemini.",
+  "requestFramePermissions": []
+}
