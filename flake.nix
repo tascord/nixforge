@@ -73,7 +73,13 @@
         packages.default = pkgs.buildNpmPackage {
           pname = "nixforge";
           version = "0.0.0";
-          src = ./.;
+          src = pkgs.lib.cleanSourceWith {
+            src = ./.;
+            filter = name: type:
+              let baseName = baseNameOf name; in
+              ! (type == "directory" && (baseName == "node_modules" || baseName == ".git" || baseName == ".devenv" || baseName == ".direnv" || baseName == "dist" || baseName == "dist-electron")) &&
+              ! (baseName == "result");
+          };
 
           npmDepsHash = "sha256-4rDJlmj8scC/U1uAVhvItxeaxJdQcLknu0fnnhfl8aY=";
 

@@ -78,8 +78,8 @@ export const generateFlake = (config: AppConfig): string => {
 
   inputs = {
 ${HEADER}    nixpkgs.url = "${nixpkgsUrl}";
-    #nixforge.url = "github:tascord/nixforge";
-    #nixforge.inputs.nixpkgs.follows = "nixpkgs";
+    nixforge.url = "github:tascord/nixforge";
+    nixforge.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager/${homeManagerBranch}";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";${hardwareInput}${customInputsStr}${FOOTER}
   };
@@ -214,7 +214,7 @@ ${HEADER}
     adwaita-icon-theme
     gnome-themes-extra
     hicolor-icon-theme
-    #inputs.nixforge.packages.\${pkgs.system}.default
+    inputs.nixforge.packages.\${pkgs.system}.default
     
     ${sysPackages}
   ];
