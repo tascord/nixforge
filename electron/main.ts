@@ -42,6 +42,7 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
@@ -52,14 +53,14 @@ const createWindow = () => {
   if (process.env.VITE_DEV_SERVER_URL) {
     console.log("Loading URL:", process.env.VITE_DEV_SERVER_URL);
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
   } else {
     console.log("Loading local file:", path.join(__dirname, '../dist/index.html'));
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
   
   // Force DevTools to be sure
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       console.error('Failed to load:', errorCode, errorDescription);

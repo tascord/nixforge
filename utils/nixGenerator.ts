@@ -201,6 +201,7 @@ ${HEADER}
 
   nix.settings.experimental-features = [ ${features} ];
   nix.settings.auto-optimise-store = true;
+  nix.settings.trusted-users = [ "root" ${uniqueUsers.map(u => `"${u.username}"`).join(" ")} ];
   nixpkgs.config.allowUnfree = true;
   users.mutableUsers = false;
   ${swapConfig}
