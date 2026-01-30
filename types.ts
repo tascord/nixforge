@@ -65,6 +65,7 @@ export interface ElectronAPI {
   generateHardwareConfig: () => Promise<{ success: boolean; content?: string; error?: string }>;
   generatePasswordHash: (password: string) => Promise<{ success: boolean; hash?: string; error?: string }>;
   runBuild: (args: { directory: string; action: 'switch' | 'boot'; flakeURI: string }) => void;
+  runFlakeUpdate: (args: { directory: string }) => void;
   onBuildLog: (callback: (log: string) => void) => void;
   onBuildExit: (callback: (code: number) => void) => void;
   saveConfig: (config: AppConfig) => Promise<{ success: boolean; error?: string }>;

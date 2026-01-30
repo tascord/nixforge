@@ -43,7 +43,7 @@
     ],
     "linux": {
       "target": [
-        "AppImage"
+        "dir"
       ],
       "category": "Development"
     }

@@ -333,7 +333,34 @@ app.whenReady().then(() => {
         mainWindow?.webContents.send('build-exit', 1);
     });
   });
+  ipcMain.on('run-flake-update', async (event, { directory }) => {
+    if (!mainWindow) return;
 
+    const cmd = `nix flake update`;
+    mainWindow.webContents.send('build-log', `> Running: ${cmd} in ${directory}\n`);
+
+    const child = spawn('nix', ['flake', 'update'], {
+        cwd: directory,
+        env: { ...process.env, PATH: '/run/current-system/sw/bin:/usr/bin:/bin' }
+    });
+
+    child.stdout.on('data', (data) => {
+        mainWindow?.webContents.send('build-log', data.toString());
+    });
+
+    child.stderr.on('data', (data) => {
+        mainWindow?.webContents.send('build-log', data.toString());
+    });
+
+    child.on('close', (code) => {
+        mainWindow?.webContents.send('build-exit', code || 0);
+    });
+
+    child.on('error', (err) => {
+        mainWindow?.webContents.send('build-log', `\nError launching process: ${err.message}\n`);
+        mainWindow?.webContents.send('build-exit', 1);
+    });
+  });
     ipcMain.handle('generate-hardware-config', async () => {
         try {
             // Include file systems by default as it's required for a bootable system

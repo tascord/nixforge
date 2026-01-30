@@ -1,14 +1,17 @@
 import React from 'react';
 import { Tab } from '../types';
-import { Settings, Server, Box, Users, Code, Cpu, LayoutTemplate, Play, Power } from 'lucide-react';
+import { Settings, Server, Box, Users, Code, Cpu, LayoutTemplate, Play, Power, RefreshCw } from 'lucide-react';
 
 interface NavigationProps {
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
   onRunBuild: (action: 'switch' | 'boot') => void;
+  onRunUpdate: () => void;
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, onRunBuild }) => {
+export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, onRunBuild, onRunUpdate, theme, setTheme }) => {
   const navItems = [
     { id: Tab.GENERAL, icon: Settings, label: "General" },
     { id: Tab.HARDWARE, icon: Cpu, label: "Hardware" },
@@ -73,6 +76,13 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab,
          >
             <Power size={16} />
             <span>Build for Boot</span>
+         </button>
+         <button
+            onClick={() => onRunUpdate()}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md text-amber-500 hover:bg-amber-500/10 hover:text-amber-400 transition-colors"
+         >
+            <RefreshCw size={16} />
+            <span>Update Flake</span>
          </button>
       </div>
     </nav>

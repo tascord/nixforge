@@ -458,6 +458,26 @@ function App() {
       }
   };
 
+  const handleFlakeUpdate = async () => {
+    if (!window.electronAPI || !homeDir) return;
+
+    const projectPath = getProjectPath();
+    if (!projectPath) return;
+
+    setIsBuildOpen(true);
+    setBuildStatus('building');
+    setBuildLogs(['Starting nix flake update...']);
+    setBuildCmd('nix flake update');
+
+    try {
+        window.electronAPI.runFlakeUpdate({ directory: projectPath });
+    } catch (e: any) {
+        console.error(e);
+        setBuildStatus('error');
+        setBuildLogs(prev => [...prev, `Error: ${e.message}`]);
+    }
+  };
+
 
   const updateSystem = (updates: Partial<typeof config.system>) => {
     setConfig(prev => ({ ...prev, system: { ...prev.system, ...updates } }));
@@ -1020,7 +1040,14 @@ function App() {
 
   return (
     <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} onRunBuild={handleRunBuild} theme={theme} setTheme={setTheme} />
+      <Navigation 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onRunBuild={handleRunBuild} 
+        onRunUpdate={handleFlakeUpdate}
+        theme={theme} 
+        setTheme={setTheme} 
+      />
       
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm">

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppPaths: () => ipcRenderer.invoke('get-app-paths'),
   generateHardwareConfig: () => ipcRenderer.invoke('generate-hardware-config'),
   runBuild: (args: any) => ipcRenderer.send('run-build', args),
+  runFlakeUpdate: (args: { directory: string }) => ipcRenderer.send('run-flake-update', args),
   onBuildLog: (callback: (log: string) => void) => ipcRenderer.on('build-log', (_event, log) => callback(log)),
   onBuildExit: (callback: (code: number) => void) => ipcRenderer.on('build-exit', (_event, code) => callback(code)),
   generatePasswordHash: (password: string) => ipcRenderer.invoke('generate-password-hash', { password }),
