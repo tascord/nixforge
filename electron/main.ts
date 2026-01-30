@@ -59,6 +59,14 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
   
+  // Handle deep links when window is ready
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (pendingDeepLink) {
+      mainWindow?.webContents.send('deep-link', pendingDeepLink);
+      pendingDeepLink = null;
+    }
+  });
+
   // Force DevTools to be sure
   // mainWindow.webContents.openDevTools();
 
@@ -66,6 +74,49 @@ const createWindow = () => {
       console.error('Failed to load:', errorCode, errorDescription);
   });
 };
+
+let pendingDeepLink: string | null = null;
+
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('nixforge', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('nixforge');
+}
+
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+    
+    // The commandLine is an array of strings in which the last element is the deep link url
+    const url = commandLine.pop();
+    if (url && url.startsWith('nixforge://')) {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('deep-link', url);
+      } else {
+        pendingDeepLink = url;
+      }
+    }
+  });
+
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('deep-link', url);
+    } else {
+      pendingDeepLink = url;
+    }
+  });
+}
 
 app.whenReady().then(() => {
   console.log("App Ready");

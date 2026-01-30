@@ -70,6 +70,7 @@ export interface ElectronAPI {
   saveConfig: (config: AppConfig) => Promise<{ success: boolean; error?: string }>;
   loadConfig: () => Promise<{ success: boolean; config?: AppConfig; error?: string }>;
   searchPackages: (query: string) => Promise<{ success: boolean; packages?: NixPackage[]; error?: string }>;
+  onDeepLink: (callback: (url: string) => void) => void;
 }
 
 declare global {

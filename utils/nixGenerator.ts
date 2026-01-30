@@ -107,7 +107,11 @@ ${HEADER}    nixpkgs.url = "${nixpkgsUrl}";
 export const generateSystemConfig = (appConfig: AppConfig): string => {
   const { system: config, users, nixVersion } = appConfig;
   const features = config.experimentalFeatures.map(f => `"${f}"`).join(" ");
+  const isSteam = (p: any) => p.name === "pkgs.steam" || p.name === "steam";
+  const hasSteam = config.systemPackages.some(isSteam) || 
+                   users.some(u => u.packages.some(isSteam));
   const sysPackages = config.systemPackages
+    .filter(p => !isSteam(p))
     .map(p => {
         const name = p.name.replace(/^pkgs\./, "");
         return PACKAGE_RENAMES[name] || name;
@@ -193,8 +197,12 @@ ${HEADER}
 
   # Enable graphics and performance optimizations
   hardware.graphics.enable = true;
+  hardware.graphics.enable32Bit = true;
   # For older versions (pre-24.05)
   hardware.opengl.enable = true;
+  hardware.opengl.driSupport32Bit = true;
+
+  ${hasSteam ? "programs.steam.enable = true;" : ""}
 
   # Recommended for sluggish systems/virtualization
   services.xserver.videoDrivers = [ "modesetting" ];
@@ -284,7 +292,9 @@ export const mergeWithExisting = (existing: string, generated: string): string =
 };
 
 export const generateHomeConfig = (user: UserConfig, nixVersion: string = "23.11"): string => {
+  const isSteam = (p: any) => p.name === "pkgs.steam" || p.name === "steam";
   const packages = user.packages
+    .filter(p => !isSteam(p))
     .map(p => {
         const name = p.name.replace(/^pkgs\./, "");
         return PACKAGE_RENAMES[name] || name;

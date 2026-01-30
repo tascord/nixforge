@@ -201,6 +201,101 @@ function App() {
              setBuildStatus(code === 0 ? 'success' : 'error');
              setBuildLogs(prev => [...prev, `\nProcess exited with code ${code}`]);
         });
+
+        // Listen for deep links
+        window.electronAPI.onDeepLink((url: string) => {
+            console.log("Deep link received:", url);
+            try {
+                const parsedUrl = new URL(url);
+                const action = parsedUrl.host;
+                const params = new URLSearchParams(parsedUrl.search);
+
+                if (action === 'add') {
+                    const packagesParam = params.get('packages');
+                    const servicesParam = params.get('services');
+
+                    setConfig(prev => {
+                        if (!prev) return prev;
+                        let next = { ...prev };
+
+                        if (packagesParam) {
+                            const packageNames = packagesParam.split(',');
+                            const newPackages: NixPackage[] = packageNames.map(name => ({
+                                name: name.startsWith('pkgs.') ? name : `pkgs.${name}`,
+                                description: 'Added via deep link'
+                            }));
+
+                            // Filter out already selected packages
+                            const filteredNew = newPackages.filter(
+                                np => !next.system.systemPackages.some(sp => sp.name === np.name)
+                            );
+
+                            if (filteredNew.length > 0) {
+                                next = {
+                                    ...next,
+                                    system: {
+                                        ...next.system,
+                                        systemPackages: [...next.system.systemPackages, ...filteredNew]
+                                    }
+                                };
+                            }
+                        }
+
+                        if (servicesParam) {
+                            const serviceConfigs = servicesParam.split(',');
+                            const newServices: NixService[] = serviceConfigs.map(configStr => {
+                                // Format: name:option1=val1:option2=val2
+                                const [name, ...options] = configStr.split(':');
+                                const parsedOptions: Record<string, any> = {};
+                                options.forEach(opt => {
+                                    const [key, val] = opt.split('=');
+                                    if (key && val) {
+                                        if (val === 'true') parsedOptions[key] = true;
+                                        else if (val === 'false') parsedOptions[key] = false;
+                                        else if (!isNaN(Number(val))) parsedOptions[key] = Number(val);
+                                        else parsedOptions[key] = val;
+                                    }
+                                });
+
+                                return {
+                                    name,
+                                    enabled: true,
+                                    options: parsedOptions,
+                                    description: 'Added via deep link'
+                                };
+                            });
+
+                            // Merge services
+                            const updatedServices = [...next.system.services];
+                            newServices.forEach(ns => {
+                                const existingIdx = updatedServices.findIndex(s => s.name === ns.name);
+                                if (existingIdx !== -1) {
+                                    updatedServices[existingIdx] = {
+                                        ...updatedServices[existingIdx],
+                                        enabled: true,
+                                        options: { ...updatedServices[existingIdx].options, ...ns.options }
+                                    };
+                                } else {
+                                    updatedServices.push(ns);
+                                }
+                            });
+
+                            next = {
+                                ...next,
+                                system: {
+                                    ...next.system,
+                                    services: updatedServices
+                                }
+                            };
+                        }
+
+                        return next;
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to parse deep link:", e);
+            }
+        });
     }
   }, []);
 
