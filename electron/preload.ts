@@ -18,5 +18,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveConfig: (config: any) => ipcRenderer.invoke('save-config', config),
   loadConfig: () => ipcRenderer.invoke('load-config'),
   searchPackages: (query: string) => ipcRenderer.invoke('search-packages', { query }),
+  searchOptions: (query: string) => ipcRenderer.invoke('search-options', { query }),
   onDeepLink: (callback: (url: string) => void) => ipcRenderer.on('deep-link', (_event, url) => callback(url)),
 });

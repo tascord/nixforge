@@ -53,7 +53,7 @@ const createWindow = () => {
   if (process.env.VITE_DEV_SERVER_URL) {
     console.log("Loading URL:", process.env.VITE_DEV_SERVER_URL);
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-    // mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
   } else {
     console.log("Loading local file:", path.join(__dirname, '../dist/index.html'));
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
@@ -412,57 +412,16 @@ app.whenReady().then(() => {
             const sanitizedQuery = query.replace(/[^a-zA-Z0-9-_ ]/g, '');
             if (sanitizedQuery.length < 2) return { success: true, packages: [] };
 
-            // Super fast search using nix-env -qa with grep
-            // We use 'nice' to prevent UI lag
-            // We limit results to 50 for speed
-            // We search for package names containing the query string (case insensitive)
-            
-            // NOTE: This assumes channels are set up. If using strictly flakes, we might have to fallback.
-            // But nix-env is typically available even on flake systems for ad-hoc queries if NIX_PATH is set or channels exist.
-            // If this returns nothing, we try the 'nix search' approach.
-
+            // User requested to use `nix search nixpkgs [thing]`
             try {
-                // Command Explanation:
-                // nix-env -qaP: Query Available packages, print Attribute path (P)
-                // | grep -i: Case insensitive search
-                // | head -n 50: Limit results early
-                // awk: Formatting to JSON-like structure or just string parsing
-                
-                const { stdout } = await execAsync(
-                    `nix-env -qaP 2>/dev/null | grep -i "${sanitizedQuery}" | head -n 50`, 
-                    { timeout: 5000 }
-                );
-
-                if (stdout.trim()) {
-                    const lines = stdout.trim().split('\n');
-                    const packages = lines.map(line => {
-                        // Line format: nixpkgs.package  package-version
-                        // varying whitespace
-                        const parts = line.split(/\s+/);
-                        const attrPath = parts[0];
-                        // Remove nixpkgs. prefix
-                        const name = attrPath.replace(/^nixos\.|^nixpkgs\./, '');
-                        
-                        return { 
-                            name: mapPackageName(name),
-                            description: 'Nix Package' // nix-env -qaP doesn't give description easily without slow json export
-                        };
-                    });
-                    return { success: true, packages };
-                }
-            } catch (ignore) {
-                 // nix-env might fail or find nothing
-            }
-            
-            // Fallback to nix search if nix-env failed (approx 2s-5s if cached)
-             try {
                  const { stdout } = await execAsync(
-                     `nix search nixpkgs "${sanitizedQuery}" --json 2>/dev/null`, 
-                     { timeout: 10000 }
+                     `nix search nixpkgs "${sanitizedQuery}" --json 2>/dev/null`, // Ensure --json output
+                     { timeout: 15000 }
                  );
                  if (stdout.trim()) {
                      const data = JSON.parse(stdout);
                      const packages = Object.entries(data).map(([key, info]: [string, any]) => {
+                         // key is usually "legacyPackages.x86_64-linux.packageName"
                          const parts = key.split('.');
                          const name = parts[parts.length - 1]; 
                          return {
@@ -470,11 +429,76 @@ app.whenReady().then(() => {
                              description: info.description || 'No description available'
                          };
                      }).slice(0, 50);
-                     if (packages.length > 0) return { success: true, packages };
+                     return { success: true, packages };
                  }
-            } catch (e) {}
+            } catch (e) {
+                console.error("nix search failed", e);
+            }
 
             return { success: true, packages: [] };
+        } catch (e: any) {
+            return { success: false, error: e.message };
+        }
+    });
+
+    ipcMain.handle('search-options', async (event, { query }) => {
+        try {
+            // Search through services using `man configuration.nix`
+            // We get the full text and grep it.
+            const sanitizedQuery = query.replace(/[^a-zA-Z0-9-_\. ]/g, '');
+            if (sanitizedQuery.length < 2) return { success: true, services: [] };
+
+            try {
+                // Use man with 'cat' pager to get plain text content
+                // -Tutf8 not always needed but cleaner if locale issues, but let's stick to standard.
+                // col -b removes backspace formatting (bolding etc).
+                const { stdout } = await execAsync(`man -P cat configuration.nix | col -b`, { maxBuffer: 10 * 1024 * 1024 }); 
+                
+                // Very basic parsing: look for lines containing the query
+                // We want to find option definitions. In configuration.nix man page, options are listed.
+                // This is a heuristic search.
+                
+                const lines = stdout.split('\n');
+                const uniqueResults = new Set<string>();
+                const services: any[] = [];
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line.toLowerCase().includes(sanitizedQuery.toLowerCase())) {
+                        // Narrow regex: must start with services, programs, networking, etc.
+                        // and end with something that doesn't look like a URL.
+                        const match = line.match(/\b(services|programs|networking|boot|security|hardware|environment|users|virtualisation|systemd|console|fonts|i18n|location|nix|nixpkgs|powerManagement|qt|security|services|sound|time|xdg)\.[a-zA-Z0-9\.]+\b/);
+                        
+                        if (match) {
+                            const optionName = match[0];
+                            // Basic heuristic to filter out non-options and duplicates
+                            if (!uniqueResults.has(optionName) && optionName.includes('.')) {
+                                uniqueResults.add(optionName);
+                                
+                                // Strip specific leaf options to get the "Service" name
+                                // e.g. services.tailscale.enable -> services.tailscale
+                                let displayName = optionName;
+                                if (displayName.endsWith('.enable')) displayName = displayName.slice(0, -7);
+                                
+                                // Further heuristic: if it contains a slash or looks like a URL, skip it
+                                if (displayName.includes('/') || displayName.includes('://')) continue;
+
+                                services.push({
+                                    name: displayName,
+                                    options: {} 
+                                });
+                            }
+                        }
+                    }
+                    if (services.length >= 30) break;
+                }
+
+                return { success: true, services };
+
+            } catch (e) {
+                 console.error("man search failed", e);
+                 return { success: false, error: "Man page search failed" };
+            }
         } catch (e: any) {
             return { success: false, error: e.message };
         }

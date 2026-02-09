@@ -71,6 +71,7 @@ export interface ElectronAPI {
   saveConfig: (config: AppConfig) => Promise<{ success: boolean; error?: string }>;
   loadConfig: () => Promise<{ success: boolean; config?: AppConfig; error?: string }>;
   searchPackages: (query: string) => Promise<{ success: boolean; packages?: NixPackage[]; error?: string }>;
+  searchOptions: (query: string) => Promise<{ success: boolean; services?: NixService[]; error?: string }>;
   onDeepLink: (callback: (url: string) => void) => void;
 }
 

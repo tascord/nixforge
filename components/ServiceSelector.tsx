@@ -139,22 +139,36 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = ({ services, onTo
       
       {/* Configuration Input / Search */}
       <div className="p-4 bg-card z-20 relative border-b border-border" ref={dropdownRef}>
-         <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-            <input
-                type="text"
-                value={query}
-                onChange={handleSearchInput}
-                onFocus={() => query && setShowResults(true)}
-                placeholder="Add configuration (e.g. 'steam', 'git', 'firewall')..."
-                className="w-full bg-secondary/30 border border-input rounded-md py-3 pl-10 pr-4 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all shadow-sm"
-            />
-            {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin" size={16} />}
+         <div className="relative flex items-center gap-2">
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <input
+                    type="text"
+                    value={query}
+                    onChange={handleSearchInput}
+                    onFocus={() => query && setShowResults(true)}
+                    placeholder="Add configuration (e.g. 'steam', 'git', 'firewall')..."
+                    className="w-full bg-secondary/30 border border-input rounded-md py-3 pl-10 pr-10 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all shadow-sm"
+                />
+                {loading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="animate-spin text-muted-foreground" size={16} />
+                    </div>
+                )}
+            </div>
+            {query && !loading && (
+                <button 
+                    onClick={() => { setQuery(''); setShowResults(false); }}
+                    className="p-2 text-muted-foreground hover:text-foreground shrink-0"
+                >
+                    <X size={16} />
+                </button>
+            )}
          </div>
          
          {/* Dropdown Results */}
          {showResults && (
-             <div className="absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-lg shadow-xl max-h-[300px] overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-100">
+             <div className="absolute top-full left-4 right-4 mt-2 bg-popover border border-border rounded-lg shadow-xl max-h-[300px] overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-100">
                 {results.length === 0 && !loading ? (
                     <div className="p-4 text-center text-muted-foreground text-sm">No options found.</div>
                 ) : (
@@ -172,7 +186,7 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = ({ services, onTo
                                 </div>
                                 <div>
                                     <div className="font-mono text-sm font-medium text-foreground">{svc.name}</div>
-                                    <div className="text-xs text-muted-foreground line-clamp-1">{svc.description}</div>
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">NixOS Module Option</div>
                                 </div>
                             </button>
                         );

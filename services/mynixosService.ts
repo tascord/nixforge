@@ -47,6 +47,20 @@ async function getIndexName(): Promise<string> {
 export async function searchNixOptions(query: string): Promise<NixService[]> {
   if (!query) return [];
   
+  if (window.electronAPI && window.electronAPI.searchOptions) {
+      // Local search using man pages as requested
+      try {
+          const result = await window.electronAPI.searchOptions(query);
+          if (result.success && result.services) {
+              return result.services;
+          }
+      } catch (e) {
+          console.error("Local search failed", e);
+      }
+      return [];
+  }
+
+  // Fallback to online search if electronAPI is not available (e.g. web view)
   try {
     const index = await getIndexName();
     const url = `${BACKEND_ROOT}/${index}/_search`;

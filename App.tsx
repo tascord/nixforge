@@ -9,6 +9,7 @@ import { BuildModal } from './components/BuildModal';
 import { INITIAL_CONFIG, COMMON_GROUPS, HARDWARE_PRESETS, NIX_VERSIONS } from './constants';
 import { PACKAGE_GROUPS } from './packageGroups';
 import { AppConfig, Tab, NixPackage, NixService, GeneratedFile, PackageGroup } from './types';
+import { TIMEZONES } from './timezones';
 import { generateFlake, generateSystemConfig, generateHomeConfig, mergeWithExisting } from './utils/nixGenerator';
 import { parseExistingConfig, parseHomeConfig, parseFlakeConfig } from './utils/nixImporter';
 import { Monitor, HardDrive, AlertTriangle, Globe, Layout, Disc, Layers, GitBranch, Download, Import, Play, Power, Hammer, FolderOpen, Loader2, LayoutTemplate, Code, Gamepad2, Package, Plus, Trash2, Link } from 'lucide-react';
@@ -27,6 +28,10 @@ function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  // Timezone Search State
+  const [tzQuery, setTzQuery] = useState('');
+  const [showTzDropdown, setShowTzDropdown] = useState(false);
 
   // Build State
   const [isBuildOpen, setIsBuildOpen] = useState(false);
@@ -607,14 +612,50 @@ function App() {
                         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     />
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1 relative">
                     <label className="text-xs font-medium text-muted-foreground uppercase">Timezone</label>
-                    <input
-                        type="text"
-                        value={config.system.timezone}
-                        onChange={(e) => updateSystem({ timezone: e.target.value })}
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    />
+                    <div className="relative">
+                      <input
+                          type="text"
+                          value={tzQuery || config.system.timezone}
+                          onFocus={() => {
+                            setShowTzDropdown(true);
+                            setTzQuery(config.system.timezone === 'UTC' ? '' : config.system.timezone);
+                          }}
+                          onChange={(e) => setTzQuery(e.target.value)}
+                          placeholder="Search timezone..."
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      />
+                      {showTzDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-xl z-50 max-h-60 overflow-y-auto">
+                           {TIMEZONES.filter(tz => tz.toLowerCase().includes(tzQuery.toLowerCase())).slice(0, 100).map(tz => (
+                             <button
+                                key={tz}
+                                onClick={() => {
+                                  updateSystem({ timezone: tz });
+                                  setTzQuery('');
+                                  setShowTzDropdown(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors border-b border-border/50 last:border-0"
+                             >
+                               {tz}
+                             </button>
+                           ))}
+                           {TIMEZONES.filter(tz => tz.toLowerCase().includes(tzQuery.toLowerCase())).length === 0 && (
+                             <div className="p-3 text-xs text-muted-foreground text-center">No results.</div>
+                           )}
+                        </div>
+                      )}
+                      {showTzDropdown && (
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => {
+                            setShowTzDropdown(false);
+                            setTzQuery('');
+                          }}
+                        />
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-1 pt-2">
                     <label className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1">
