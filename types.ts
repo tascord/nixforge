@@ -90,6 +90,7 @@ export interface GeneratedFile {
 export enum Tab {
   GENERAL = 'General',
   HARDWARE = 'Hardware',
+  BUNDLES = 'Bundles',
   PACKAGES = 'Packages',
   SERVICES = 'Services',
   USERS = 'Users',
@@ -101,4 +102,13 @@ export interface PackageGroup {
   name: string;
   description: string;
   packages: { name: string; description: string }[];
+}
+
+export interface Bundle {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  packages: NixPackage[];
+  services: NixService[];
 }
