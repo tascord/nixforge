@@ -8,11 +8,12 @@ import { ImportModal } from './components/ImportModal';
 import { BuildModal } from './components/BuildModal';
 import { INITIAL_CONFIG, COMMON_GROUPS, HARDWARE_PRESETS, NIX_VERSIONS } from './constants';
 import { PACKAGE_GROUPS } from './packageGroups';
+import { BUNDLES } from './bundles';
 import { AppConfig, Tab, NixPackage, NixService, GeneratedFile, PackageGroup } from './types';
 import { TIMEZONES } from './timezones';
 import { generateFlake, generateSystemConfig, generateHomeConfig, mergeWithExisting } from './utils/nixGenerator';
 import { parseExistingConfig, parseHomeConfig, parseFlakeConfig } from './utils/nixImporter';
-import { Monitor, HardDrive, AlertTriangle, Globe, Layout, Disc, Layers, GitBranch, Download, Import, Play, Power, Hammer, FolderOpen, Loader2, LayoutTemplate, Code, Gamepad2, Package, Plus, Trash2, Link } from 'lucide-react';
+import { Monitor, HardDrive, AlertTriangle, Globe, Layout, Disc, Layers, GitBranch, Download, Import, Play, Power, Hammer, FolderOpen, Loader2, LayoutTemplate, Code, Gamepad2, Package, Plus, Trash2, Link, Briefcase, Check } from 'lucide-react';
 
 
 export default function AppWrapper() {
@@ -801,6 +802,171 @@ function App() {
                     </div>
                 )}
              </div>
+          </div>
+        );
+
+      case Tab.BUNDLES:
+        const hasDesktopEnvironment = config.system.services.some(s => 
+          s.name.includes('desktopManager') || s.name.includes('gnome') || s.name.includes('plasma')
+        );
+        const hasNetworking = config.system.services.some(s => 
+          s.name.includes('networkmanager') || s.name.includes('networking')
+        );
+
+        const isBundleApplied = (bundleId: string) => {
+          const bundle = BUNDLES.find(b => b.id === bundleId);
+          if (!bundle) return false;
+          
+          // Check if all packages are installed
+          const allPackagesInstalled = bundle.packages.every(pkg =>
+            config.system.systemPackages.some(p => p.name === pkg.name)
+          );
+          
+          // Check if all services are enabled
+          const allServicesEnabled = bundle.services.every(bundleSvc =>
+            config.system.services.some(s => s.name === bundleSvc.name && s.enabled)
+          );
+          
+          return allPackagesInstalled && allServicesEnabled;
+        };
+
+        const applyBundle = (bundleId: string) => {
+          const bundle = BUNDLES.find(b => b.id === bundleId);
+          if (!bundle) return;
+
+          setConfig(prev => {
+            const newPackages = [...prev.system.systemPackages];
+            const newServices = [...prev.system.services];
+
+            // Add packages that aren't already installed
+            bundle.packages.forEach(pkg => {
+              if (!newPackages.some(p => p.name === pkg.name)) {
+                newPackages.push(pkg);
+              }
+            });
+
+            // Add or enable services
+            bundle.services.forEach(bundleSvc => {
+              const existingService = newServices.find(s => s.name === bundleSvc.name);
+              if (existingService) {
+                existingService.enabled = true;
+              } else {
+                newServices.push({ ...bundleSvc });
+              }
+            });
+
+            return {
+              ...prev,
+              system: {
+                ...prev.system,
+                systemPackages: newPackages,
+                services: newServices
+              }
+            };
+          });
+        };
+
+        const getBundleIcon = (iconName: string) => {
+          switch (iconName) {
+            case 'monitor': return Monitor;
+            case 'gamepad': return Gamepad2;
+            case 'briefcase': return Briefcase;
+            case 'code': return Code;
+            default: return Package;
+          }
+        };
+
+        return (
+          <div className="space-y-6 max-w-7xl">
+            {/* Warning messages */}
+            {!hasDesktopEnvironment && (
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-md flex gap-3 items-start">
+                <AlertTriangle className="text-yellow-500 shrink-0 mt-0.5" size={20}/>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-yellow-500 mb-1">No Desktop Environment Detected</h3>
+                  <p className="text-sm text-yellow-500/80">Your system doesn't have a desktop environment configured. Consider installing a "System Basics" bundle for GNOME or Plasma to get a functional graphical interface.</p>
+                </div>
+              </div>
+            )}
+
+            {!hasNetworking && (
+              <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-md flex gap-3 items-start">
+                <AlertTriangle className="text-orange-500 shrink-0 mt-0.5" size={20}/>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-500 mb-1">No Network Manager Detected</h3>
+                  <p className="text-sm text-orange-500/80">Your system doesn't have networking configured. Without NetworkManager or similar, you won't be able to connect to the internet. Consider installing a "System Basics" bundle.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Header */}
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Package size={24} />
+                Software Bundles
+              </h2>
+              <p className="text-muted-foreground">
+                Quickly set up your system with curated package and service bundles for common use cases.
+              </p>
+            </div>
+
+            {/* Bundle Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {BUNDLES.map(bundle => {
+                const Icon = getBundleIcon(bundle.icon);
+                const isApplied = isBundleApplied(bundle.id);
+                
+                return (
+                  <div 
+                    key={bundle.id}
+                    className={`bg-card p-5 rounded-lg border shadow-sm transition-all hover:shadow-md ${
+                      isApplied ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-border'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className={`p-2 rounded-md ${
+                        isApplied ? 'bg-emerald-500/20 text-emerald-500' : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        <Icon size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base mb-1 flex items-center gap-2">
+                          {bundle.name}
+                          {isApplied && (
+                            <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                              <Check size={14} />
+                              Applied
+                            </span>
+                          )}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {bundle.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="text-xs text-muted-foreground">
+                        <span className="font-semibold">{bundle.packages.length}</span> packages • 
+                        <span className="font-semibold ml-1">{bundle.services.length}</span> services
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => applyBundle(bundle.id)}
+                      disabled={isApplied}
+                      className={`w-full py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                        isApplied
+                          ? 'bg-emerald-500/20 text-emerald-500 cursor-default'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      }`}
+                    >
+                      {isApplied ? 'Bundle Applied' : 'Apply Bundle'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
 

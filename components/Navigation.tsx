@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tab } from '../types';
-import { Settings, Server, Box, Users, Code, Cpu, LayoutTemplate, Play, Power, RefreshCw } from 'lucide-react';
+import { Settings, Server, Box, Users, Code, Cpu, LayoutTemplate, Play, Power, RefreshCw, Package } from 'lucide-react';
 
 interface NavigationProps {
   activeTab: Tab;
@@ -15,6 +15,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab,
   const navItems = [
     { id: Tab.GENERAL, icon: Settings, label: "General" },
     { id: Tab.HARDWARE, icon: Cpu, label: "Hardware" },
+    { id: Tab.BUNDLES, icon: Package, label: "Bundles" },
     // { id: Tab.PRESETS, icon: LayoutTemplate, label: "Presets" },
     { id: Tab.USERS, icon: Users, label: "Users" },
     { id: Tab.PACKAGES, icon: Box, label: "Packages" },
