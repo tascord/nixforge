@@ -1,13 +1,4 @@
-import { NixPackage, NixService } from "./types";
-
-export interface Bundle {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  packages: NixPackage[];
-  services: NixService[];
-}
+import { NixPackage, NixService, Bundle } from "./types";
 
 export const BUNDLES: Bundle[] = [
   {

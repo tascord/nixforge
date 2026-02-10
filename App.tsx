@@ -947,8 +947,9 @@ function App() {
 
                     <div className="space-y-2 mb-4">
                       <div className="text-xs text-muted-foreground">
-                        <span className="font-semibold">{bundle.packages.length}</span> packages • 
-                        <span className="font-semibold ml-1">{bundle.services.length}</span> services
+                        <span className="font-semibold">{bundle.packages.length}</span> packages
+                        <span className="mx-1">•</span>
+                        <span className="font-semibold">{bundle.services.length}</span> services
                       </div>
                     </div>
 
