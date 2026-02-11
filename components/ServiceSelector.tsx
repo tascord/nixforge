@@ -141,7 +141,9 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = ({ services, onTo
       <div className="p-4 bg-card z-20 relative border-b border-border" ref={dropdownRef}>
          <div className="relative flex items-center gap-2">
             <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                    <Search className="text-muted-foreground" size={16} />
+                </div>
                 <input
                     type="text"
                     value={query}
@@ -179,7 +181,7 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = ({ services, onTo
                                 key={svc.name}
                                 onClick={() => addItem(svc)}
                                 disabled={isEnabled}
-                                className="w-full text-left p-3 hover:bg-muted/50 transition-colors flex items-start gap-3 border-b border-border/50 last:border-0 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                className="w-full text-left p-3 bg-background hover:bg-muted/50 transition-colors flex items-start gap-3 border-b border-border/50 last:border-0 disabled:opacity-50 disabled:cursor-not-allowed group"
                             >
                                 <div className={`mt-0.5 p-1.5 rounded-md ${isEnabled ? 'bg-green-500/10 text-green-500' : 'bg-secondary text-muted-foreground group-hover:text-foreground'}`}>
                                     {isEnabled ? <Check size={14} /> : <Plus size={14} />}
