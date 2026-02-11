@@ -14,7 +14,6 @@
     pkgs.electron
     pkgs.python3
     pkgs.pkg-config
-    pkgs.nh
   ];
 
   env.LD_LIBRARY_PATH = lib.makeLibraryPath [
