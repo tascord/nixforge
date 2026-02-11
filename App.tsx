@@ -444,10 +444,7 @@ function App() {
 
         setBuildLogs(prev => [...prev, 'Files written to disk.', 'Invoking build command...']);
 
-        const isNh = true; 
-        const cmd = isNh 
-            ? `nh os ${action} ${projectPath}` 
-            : `nixos-rebuild ${action} --flake ${projectPath}#${config.system.hostname} --use-remote-sudo`;
+        const cmd = `nixos-rebuild ${action} --flake ${projectPath}#${config.system.hostname} --use-remote-sudo`;
         
         setBuildCmd(cmd);
         

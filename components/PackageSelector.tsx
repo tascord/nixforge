@@ -97,7 +97,9 @@ export const PackageSelector: React.FC<PackageSelectorProps> = ({ selectedPackag
         <div className="mb-6 relative">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                <Search className="text-muted-foreground" size={16} />
+              </div>
               <input
                 type="text"
                 value={query}
@@ -138,7 +140,7 @@ export const PackageSelector: React.FC<PackageSelectorProps> = ({ selectedPackag
                          setQuery('');
                          setResults([]);
                      }}
-                     className="p-4 text-center text-muted-foreground text-sm cursor-pointer hover:bg-secondary/20 hover:text-foreground transition-colors group"
+                     className="p-4 text-center text-muted-foreground text-sm cursor-pointer bg-background hover:bg-secondary/20 hover:text-foreground transition-colors group"
                  >
                    <div className="flex flex-col items-center gap-1">
                       <span>No results for "{query}"</span>
@@ -157,7 +159,7 @@ export const PackageSelector: React.FC<PackageSelectorProps> = ({ selectedPackag
                       setQuery('');
                       setResults([]);
                     }}
-                    className={`p-3 border-b border-border/50 last:border-b-0 cursor-pointer hover:bg-secondary/50 transition-colors ${
+                    className={`p-3 border-b border-border/50 last:border-b-0 cursor-pointer bg-background hover:bg-secondary/50 transition-colors ${
                       isSelected ? 'opacity-50' : ''
                     }`}
                   >
