@@ -81,7 +81,7 @@
               ! (baseName == "result");
           };
 
-          npmDepsHash = "sha256-4rDJlmj8scC/U1uAVhvItxeaxJdQcLknu0fnnhfl8aY=";
+          npmDepsHash = "sha256-1cFLsSG9fV8o+YT4BLuUycEwg2vT0VPaGcYrInk6xj8=";
 
           nativeBuildInputs = [ pkgs.python3 pkgs.pkg-config pkgs.makeWrapper ];
 
