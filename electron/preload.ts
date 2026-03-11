@@ -20,4 +20,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   searchPackages: (query: string) => ipcRenderer.invoke('search-packages', { query }),
   searchOptions: (query: string) => ipcRenderer.invoke('search-options', { query }),
   onDeepLink: (callback: (url: string) => void) => ipcRenderer.on('deep-link', (_event, url) => callback(url)),
+  gitCommit: (directory: string, message: string) => ipcRenderer.invoke('git-commit', { directory, message }),
+  gitStatus: (directory: string) => ipcRenderer.invoke('git-status', { directory }),
+  gitLog: (directory: string) => ipcRenderer.invoke('git-log', { directory }),
+  gitCheckout: (directory: string, hash: string) => ipcRenderer.invoke('git-checkout', { directory, hash }),
 });

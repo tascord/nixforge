@@ -73,6 +73,10 @@ export interface ElectronAPI {
   searchPackages: (query: string) => Promise<{ success: boolean; packages?: NixPackage[]; error?: string }>;
   searchOptions: (query: string) => Promise<{ success: boolean; services?: NixService[]; error?: string }>;
   onDeepLink: (callback: (url: string) => void) => void;
+  gitCommit: (directory: string, message: string) => Promise<{ success: boolean; error?: string }>;
+  gitStatus: (directory: string) => Promise<{ success: boolean; status?: string; error?: string }>;
+  gitLog: (directory: string) => Promise<{ success: boolean; log?: any[]; error?: string }>;
+  gitCheckout: (directory: string, hash: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

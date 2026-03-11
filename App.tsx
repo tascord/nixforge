@@ -6,6 +6,7 @@ import { ServiceSelector } from './components/ServiceSelector';
 import { CodeEditor } from './components/CodeEditor';
 import { ImportModal } from './components/ImportModal';
 import { BuildModal } from './components/BuildModal';
+import { VersionHistoryModal } from './components/VersionHistoryModal';
 import { INITIAL_CONFIG, COMMON_GROUPS, HARDWARE_PRESETS, NIX_VERSIONS } from './constants';
 import { PACKAGE_GROUPS } from './packageGroups';
 import { BUNDLES } from './bundles';
@@ -13,7 +14,7 @@ import { AppConfig, Tab, NixPackage, NixService, GeneratedFile, PackageGroup } f
 import { TIMEZONES } from './timezones';
 import { generateFlake, generateSystemConfig, generateHomeConfig, mergeWithExisting } from './utils/nixGenerator';
 import { parseExistingConfig, parseHomeConfig, parseFlakeConfig } from './utils/nixImporter';
-import { Monitor, HardDrive, AlertTriangle, Globe, Layout, Disc, Layers, GitBranch, Download, Import, Play, Power, Hammer, FolderOpen, Loader2, LayoutTemplate, Code, Gamepad2, Package, Plus, Trash2, Link, Briefcase, Check } from 'lucide-react';
+import { Monitor, HardDrive, AlertTriangle, Globe, Layout, Disc, Layers, GitBranch, Download, Import, Play, Power, Hammer, FolderOpen, Loader2, LayoutTemplate, Code, Gamepad2, History, Package, Plus, Trash2, Link, Briefcase, Check } from 'lucide-react';
 
 
 export default function AppWrapper() {
@@ -36,6 +37,7 @@ function App() {
 
   // Build State
   const [isBuildOpen, setIsBuildOpen] = useState(false);
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [buildLogs, setBuildLogs] = useState<string[]>([]);
   const [buildStatus, setBuildStatus] = useState<'idle' | 'building' | 'success' | 'error'>('idle');
   const [buildCmd, setBuildCmd] = useState('');
@@ -1244,7 +1246,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
+    <div className="flex h-screen bg-background bg-gradient-to-br from-background to-secondary/20 text-foreground font-sans overflow-hidden">
       <Navigation 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -1268,7 +1270,7 @@ function App() {
              </button>
         </header>
 
-        <div className="flex-1 p-6 overflow-auto relative bg-background">
+        <div className="flex-1 p-6 overflow-auto relative bg-transparent">
            {renderContent()}
         </div>
       </main>

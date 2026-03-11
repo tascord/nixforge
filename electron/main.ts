@@ -407,12 +407,109 @@ app.whenReady().then(() => {
         }
     });
 
+let searchAuthCache: { user: string; pass: string; version: string } | null = null;
+
+async function getSearchAuth() {
+    if (searchAuthCache) return searchAuthCache;
+    return new Promise((resolve, reject) => {
+        https.get('https://search.nixos.org/bundle.js', (res) => {
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+                const userMatch = data.match(/elasticsearchUsername:"([^"]+)"/);
+                const passMatch = data.match(/elasticsearchPassword:"([^"]+)"/);
+                const versionMatch = data.match(/aVersion:parseInt\("([^"]+)"\)/);
+                if (userMatch && passMatch && versionMatch) {
+                    searchAuthCache = { user: userMatch[1], pass: passMatch[1], version: versionMatch[1] };
+                    resolve(searchAuthCache);
+                } else {
+                    reject(new Error("Failed to parse bundle.js"));
+                }
+            });
+        }).on('error', reject);
+    });
+}
+
     ipcMain.handle('search-packages', async (event, { query }) => {
         try {
             const sanitizedQuery = query.replace(/[^a-zA-Z0-9-_ ]/g, '');
             if (sanitizedQuery.length < 2) return { success: true, packages: [] };
 
-            // User requested to use `nix search nixpkgs [thing]`
+            // 1. Try fast online search via search.nixos.org API
+            try {
+                const auth: any = await getSearchAuth();
+                const authHeader = 'Basic ' + Buffer.from(`${auth.user}:${auth.pass}`).toString('base64');
+                const index = `latest-${auth.version}-nixos-unstable`;
+                const searchBody = JSON.stringify({
+                    query: {
+                        bool: {
+                            must: [
+                                {
+                                    multi_match: {
+                                        query: sanitizedQuery,
+                                        type: "best_fields",
+                                        fields: [
+                                            "package_attr_name^4", 
+                                            "package_pname^3", 
+                                            "package_programs^3", 
+                                            "package_description^1"
+                                        ],
+                                        fuzziness: "AUTO"
+                                    }
+                                }
+                            ],
+                            filter: [
+                                { term: { type: "package" } }
+                            ]
+                        }
+                    },
+                    size: 50
+                });
+
+                const packages = await new Promise((resolve, reject) => {
+                    const req = https.request(`https://search.nixos.org/backend/${index}/_search`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': authHeader,
+                            'Content-Type': 'application/json',
+                            'Content-Length': Buffer.byteLength(searchBody)
+                        }
+                    }, (res) => {
+                        let data = '';
+                        res.on('data', chunk => data += chunk);
+                        res.on('end', () => {
+                            if (res.statusCode !== 200) {
+                                reject(new Error(`Status ${res.statusCode}: ${data}`));
+                                return;
+                            }
+                            try {
+                                const parsed = JSON.parse(data);
+                                const hits = parsed.hits?.hits || [];
+                                const pkgList = hits
+                                  .filter((hit: any) => hit._source.type === 'package')
+                                  .map((hit: any) => ({
+                                      name: mapPackageName(hit._source.package_attr_name),
+                                      description: hit._source.package_description || 'No description available'
+                                  }));
+                                resolve(pkgList);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        });
+                    });
+                    req.on('error', reject);
+                    req.write(searchBody);
+                    req.end();
+                });
+                
+                if (Array.isArray(packages) && packages.length > 0) {
+                    return { success: true, packages };
+                }
+            } catch (e: any) {
+                console.error("Online search failed, falling back to local nix search", e.message);
+            }
+
+            // 2. Fallback to `nix search nixpkgs [thing]`
             try {
                  const { stdout } = await execAsync(
                      `nix search nixpkgs "${sanitizedQuery}" --json 2>/dev/null`, // Ensure --json output
@@ -441,22 +538,139 @@ app.whenReady().then(() => {
         }
     });
 
+    ipcMain.handle('git-commit', async (event, { directory, message }) => {
+        try {
+            await execAsync('git init', { cwd: directory });
+            await execAsync('git add .', { cwd: directory });
+            await execAsync(`git commit -m "${message}"`, { cwd: directory }).catch(() => {});
+            return { success: true };
+        } catch (e: any) {
+            return { success: false, error: e.message };
+        }
+    });
+    ipcMain.handle('git-status', async (event, { directory }) => {
+        try {
+            const { stdout } = await execAsync('git status --porcelain', { cwd: directory });
+            return { success: true, status: stdout };
+        } catch (e: any) {
+            return { success: false, error: e.message };
+        }
+    });
+    ipcMain.handle('git-log', async (event, { directory }) => {
+        try {
+            const { stdout } = await execAsync('git log --pretty=format:"%h|%s|%ad" --date=iso', { cwd: directory });
+            const log = stdout.split("\n").filter(Boolean).map(line => {
+                const [hash, message, date] = line.split('|');
+                return { hash, message, date };
+            });
+            return { success: true, log };
+        } catch (e: any) {
+            return { success: false, error: e.message };
+        }
+    });
+    ipcMain.handle('git-checkout', async (event, { directory, hash }) => {
+        try {
+            // restore everything to that hash, we can use git checkout hash -- .
+            await execAsync(`git checkout ${hash} -- .`, { cwd: directory });
+            await execAsync(`git commit -m "Reverted to ${hash}"`, { cwd: directory });
+            return { success: true };
+        } catch (e: any) {
+            return { success: false, error: e.message };
+        }
+    });
+
     ipcMain.handle('search-options', async (event, { query }) => {
         try {
-            // Search through services using `man configuration.nix`
-            // We get the full text and grep it.
             const sanitizedQuery = query.replace(/[^a-zA-Z0-9-_\. ]/g, '');
             if (sanitizedQuery.length < 2) return { success: true, services: [] };
 
+            // 1. Try fast online search via search.nixos.org API
             try {
-                // Use man with 'cat' pager to get plain text content
-                // -Tutf8 not always needed but cleaner if locale issues, but let's stick to standard.
-                // col -b removes backspace formatting (bolding etc).
-                const { stdout } = await execAsync(`man -P cat configuration.nix | col -b`, { maxBuffer: 10 * 1024 * 1024 }); 
+                const auth: any = await getSearchAuth();
+                const authHeader = 'Basic ' + Buffer.from(`${auth.user}:${auth.pass}`).toString('base64');
+                const index = `latest-${auth.version}-nixos-unstable`;
+                const searchBody = JSON.stringify({
+                    query: {
+                        bool: {
+                            must: [
+                                {
+                                    multi_match: {
+                                        query: sanitizedQuery,
+                                        fields: ["option_name^4", "option_description^1"],
+                                        fuzziness: "AUTO"
+                                    }
+                                }
+                            ],
+                            filter: [
+                                { term: { type: "option" } }
+                            ]
+                        }
+                    },
+                    size: 50
+                });
+
+                const servicesList = await new Promise((resolve, reject) => {
+                    const req = https.request(`https://search.nixos.org/backend/${index}/_search`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': authHeader,
+                            'Content-Type': 'application/json',
+                            'Content-Length': Buffer.byteLength(searchBody)
+                        }
+                    }, (res) => {
+                        let data = '';
+                        res.on('data', chunk => data += chunk);
+                        res.on('end', () => {
+                            if (res.statusCode !== 200) {
+                                reject(new Error(`Status ${res.statusCode}`));
+                                return;
+                            }
+                            try {
+                                const parsed = JSON.parse(data);
+                                const hits = parsed.hits?.hits || [];
+                                
+                                const uniqueResults = new Set<string>();
+                                const services: any[] = [];
+                                
+                                for (const hit of hits) {
+                                    if (hit._source.type !== 'option') continue;
+                                    let optionName = hit._source.option_name;
+                                    
+                                    let displayName = optionName;
+                                    if (displayName.endsWith('.enable')) displayName = displayName.slice(0, -7);
+                                    
+                                    // Make sure it doesn't just return generic top-level namespaces
+                                    if (displayName.includes('.') && !uniqueResults.has(displayName)) {
+                                        uniqueResults.add(displayName);
+                                        services.push({
+                                            name: displayName,
+                                            description: (hit._source.option_description || '').replace(/<[^>]+>/g, '').substring(0, 150),
+                                            options: {}
+                                        });
+                                    }
+                                    if (services.length >= 30) break;
+                                }
+                                resolve(services);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        });
+                    });
+                    req.on('error', reject);
+                    req.write(searchBody);
+                    req.end();
+                });
                 
-                // Very basic parsing: look for lines containing the query
-                // We want to find option definitions. In configuration.nix man page, options are listed.
-                // This is a heuristic search.
+                if (Array.isArray(servicesList) && servicesList.length > 0) {
+                    return { success: true, services: servicesList };
+                }
+            } catch (e) {
+                console.error("Online options search failed, falling back to local man page search", e);
+            }
+
+            // 2. Fallback to `man configuration.nix` search
+            try {
+                const { stdout } = await execAsync(`man -P cat configuration.nix | col -b`, { maxBuffer: 10 * 1024 * 1024 });
                 
                 const lines = stdout.split('\n');
                 const uniqueResults = new Set<string>();
@@ -465,22 +679,16 @@ app.whenReady().then(() => {
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (line.toLowerCase().includes(sanitizedQuery.toLowerCase())) {
-                        // Narrow regex: must start with services, programs, networking, etc.
-                        // and end with something that doesn't look like a URL.
                         const match = line.match(/\b(services|programs|networking|boot|security|hardware|environment|users|virtualisation|systemd|console|fonts|i18n|location|nix|nixpkgs|powerManagement|qt|security|services|sound|time|xdg)\.[a-zA-Z0-9\.]+\b/);
                         
                         if (match) {
                             const optionName = match[0];
-                            // Basic heuristic to filter out non-options and duplicates
                             if (!uniqueResults.has(optionName) && optionName.includes('.')) {
                                 uniqueResults.add(optionName);
                                 
-                                // Strip specific leaf options to get the "Service" name
-                                // e.g. services.tailscale.enable -> services.tailscale
                                 let displayName = optionName;
                                 if (displayName.endsWith('.enable')) displayName = displayName.slice(0, -7);
                                 
-                                // Further heuristic: if it contains a slash or looks like a URL, skip it
                                 if (displayName.includes('/') || displayName.includes('://')) continue;
 
                                 services.push({
