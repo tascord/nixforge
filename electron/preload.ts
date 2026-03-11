@@ -24,4 +24,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   gitStatus: (directory: string) => ipcRenderer.invoke('git-status', { directory }),
   gitLog: (directory: string) => ipcRenderer.invoke('git-log', { directory }),
   gitCheckout: (directory: string, hash: string) => ipcRenderer.invoke('git-checkout', { directory, hash }),
+  gitDiff: (directory: string) => ipcRenderer.invoke('git-diff', { directory }),
 });

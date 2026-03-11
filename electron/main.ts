@@ -548,6 +548,16 @@ async function getSearchAuth() {
             return { success: false, error: e.message };
         }
     });
+    ipcMain.handle('git-diff', async (event, { directory }) => {
+        try {
+            await execAsync('git add .', { cwd: directory }).catch(() => {});
+            const { stdout } = await execAsync('git diff HEAD', { cwd: directory });
+            return { success: true, diff: stdout };
+        } catch (e: any) {
+            return { success: false, error: e.message };
+        }
+    });
+
     ipcMain.handle('git-status', async (event, { directory }) => {
         try {
             const { stdout } = await execAsync('git status --porcelain', { cwd: directory });

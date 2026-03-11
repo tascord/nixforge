@@ -77,6 +77,7 @@ export interface ElectronAPI {
   gitStatus: (directory: string) => Promise<{ success: boolean; status?: string; error?: string }>;
   gitLog: (directory: string) => Promise<{ success: boolean; log?: any[]; error?: string }>;
   gitCheckout: (directory: string, hash: string) => Promise<{ success: boolean; error?: string }>;
+  gitDiff: (directory: string) => Promise<{ success: boolean; diff?: string; error?: string }>;
 }
 
 declare global {
